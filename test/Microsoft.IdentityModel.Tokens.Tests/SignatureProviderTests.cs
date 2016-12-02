@@ -94,6 +94,7 @@ namespace Microsoft.IdentityModel.Tokens.Tests
             FactoryCreateFor("Signing: SymmetricKeySize Key to small", KeyingMaterial.DefaultSymmetricSecurityKey_56, SecurityAlgorithms.HmacSha256Signature, new CustomCryptoProviderFactory(new string[] { SecurityAlgorithms.HmacSha256Signature }), ExpectedException.NoExceptionExpected);
         }
 
+
         private void FactoryCreateFor(string testcase, SecurityKey key, string algorithm, CryptoProviderFactory factory, ExpectedException expectedException)
         {
             Console.WriteLine(testcase);
@@ -315,7 +316,21 @@ namespace Microsoft.IdentityModel.Tokens.Tests
             {
                 try
                 {
-                    var provider = new AsymmetricSignatureProvider(KeyingMaterial.ECDsa256Key, algorithm);
+                    SecurityKey key = null;
+                    if (algorithm.Equals(SecurityAlgorithms.EcdsaSha256, StringComparison.Ordinal))
+                    {
+                        key = KeyingMaterial.ECDsa256Key;
+                    }
+                    else if (algorithm.Equals(SecurityAlgorithms.EcdsaSha384, StringComparison.Ordinal))
+                    {
+                        key = KeyingMaterial.ECDsa384Key;
+                    }
+                    else
+                    {
+                        key = KeyingMaterial.ECDsa521Key;
+                    }
+
+                    var provider = new AsymmetricSignatureProvider(key, algorithm);
                 }
                 catch (Exception ex)
                 {
@@ -374,7 +389,7 @@ namespace Microsoft.IdentityModel.Tokens.Tests
             AsymmetricSignatureProviders_Verify_Variation(KeyingMaterial.ECDsa256Key_Public, SecurityAlgorithms.EcdsaSha256, rawBytes, signature, ExpectedException.NoExceptionExpected, errors, true);
 
             // wrong key
-            AsymmetricSignatureProviders_Verify_Variation(KeyingMaterial.ECDsa256Key, SecurityAlgorithms.EcdsaSha384, rawBytes, signature, ExpectedException.NoExceptionExpected, errors, false);
+            AsymmetricSignatureProviders_Verify_Variation(KeyingMaterial.ECDsa256Key, SecurityAlgorithms.EcdsaSha384, rawBytes, signature, ExpectedException.ArgumentException("IDX10634:"), errors, false);
 #if NETCOREAPP1_0
             AsymmetricSignatureProviders_Verify_Variation(KeyingMaterial.ECDsa384Key, SecurityAlgorithms.EcdsaSha384, rawBytes, signature, ExpectedException.NoExceptionExpected, errors, false);
 #else

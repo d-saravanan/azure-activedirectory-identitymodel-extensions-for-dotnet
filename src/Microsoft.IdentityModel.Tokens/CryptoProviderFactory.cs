@@ -149,8 +149,9 @@ namespace Microsoft.IdentityModel.Tokens
         /// </summary>
         /// <param name="algorithm">the algorithm to check.</param>
         /// <param name="key">the <see cref="SecurityKey"/>.</param>
+        /// <param name="isPrivateKey">Whether the <see cref="SecurityKey"/> is private key then set this to true.</param>
         /// <returns>true if 'algorithm, key' pair is supported.</returns>
-        public virtual bool IsSupportedAlgorithm(string algorithm, SecurityKey key)
+        public virtual bool IsSupportedAlgorithm(string algorithm, SecurityKey key, bool isPrivateKey)
         {
             if (CustomCryptoProvider != null && CustomCryptoProvider.IsSupportedAlgorithm(algorithm, key))
                 return true;
@@ -177,15 +178,23 @@ namespace Microsoft.IdentityModel.Tokens
                 if (jsonWebKey.Kty == JsonWebAlgorithmsKeyTypes.RSA)
                     return IsRsaAlgorithmSupported(algorithm);
                 else if (jsonWebKey.Kty == JsonWebAlgorithmsKeyTypes.EllipticCurve)
-                    return IsEcdsaAlgorithmSupported(algorithm);
+                {
+#if NETSTANDARD1_4
+                    ECDsa ecdsa = AsymmetricSignatureProvider.CreateECDsaFromJsonWebKey(jsonWebKey, isPrivateKey);
+#else
+                    ECDsaCng ecdsa = AsymmetricSignatureProvider.CreateECDsaFromJsonWebKey(jsonWebKey, isPrivateKey);
+#endif
+                    return IsEcdsaAlgorithmSupported(algorithm, ecdsa);
+                }
                 else if (jsonWebKey.Kty == JsonWebAlgorithmsKeyTypes.Octet)
                     return IsSymmetricAlgorithmSupported(algorithm);
 
                 return false;
             }
 
-            if (key as ECDsaSecurityKey != null)
-                return IsEcdsaAlgorithmSupported(algorithm);
+            ECDsaSecurityKey ecdsaSecurityKey = key as ECDsaSecurityKey;
+            if (ecdsaSecurityKey != null)
+                return IsEcdsaAlgorithmSupported(algorithm, ecdsaSecurityKey.ECDsa);
 
             if (key as SymmetricSecurityKey != null)
                 return IsSymmetricAlgorithmSupported(algorithm);
@@ -193,17 +202,27 @@ namespace Microsoft.IdentityModel.Tokens
             return false;
         }
 
-        private bool IsEcdsaAlgorithmSupported(string algorithm)
+        private bool IsEcdsaAlgorithmSupported(string algorithm, ECDsa key)
         {
             switch (algorithm)
             {
                 case SecurityAlgorithms.EcdsaSha256:
-                case SecurityAlgorithms.EcdsaSha384:
-                case SecurityAlgorithms.EcdsaSha512:
                 case SecurityAlgorithms.EcdsaSha256Signature:
+                    if (key.KeySize == 256)
+                        return true;
+                    break;
+
+                case SecurityAlgorithms.EcdsaSha384:
                 case SecurityAlgorithms.EcdsaSha384Signature:
+                    if (key.KeySize == 384)
+                        return true;
+                    break;
+
+                case SecurityAlgorithms.EcdsaSha512:
                 case SecurityAlgorithms.EcdsaSha512Signature:
-                    return true;
+                    if (key.KeySize == 521)
+                        return true;
+                    break;
             }
 
             return false;
@@ -482,7 +501,7 @@ namespace Microsoft.IdentityModel.Tokens
                 return signatureProvider;
             }
 
-            if (!IsSupportedAlgorithm(algorithm, key))
+            if (!IsSupportedAlgorithm(algorithm, key, willCreateSignatures))
                 throw LogHelper.LogExceptionMessage(new ArgumentException(String.Format(CultureInfo.InvariantCulture, LogMessages.IDX10634, algorithm, key)));
 
             AsymmetricSecurityKey asymmetricKey = key as AsymmetricSecurityKey;

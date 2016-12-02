@@ -127,7 +127,7 @@ namespace Microsoft.IdentityModel.Tokens
             if (willCreateSignatures && !HasPrivateKey(key))
                 throw LogHelper.LogExceptionMessage(new InvalidOperationException(String.Format(CultureInfo.InvariantCulture, LogMessages.IDX10638, key)));
 
-            if (!key.CryptoProviderFactory.IsSupportedAlgorithm(algorithm, key))
+            if (!key.CryptoProviderFactory.IsSupportedAlgorithm(algorithm, key, willCreateSignatures))
                 throw LogHelper.LogExceptionMessage(new ArgumentException(String.Format(CultureInfo.InvariantCulture, LogMessages.IDX10634, (algorithm ?? "null"), key), nameof(algorithm)));
 
             ValidateAsymmetricSecurityKeySize(key, algorithm, willCreateSignatures);
@@ -276,7 +276,8 @@ namespace Microsoft.IdentityModel.Tokens
                 if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     throw new PlatformNotSupportedException();
 
-                CreateECDsaFromJsonWebKey(webKey, willCreateSignatures);
+                _ecdsa = CreateECDsaFromJsonWebKey(webKey, willCreateSignatures);
+                _disposeEcdsa = true;
                 return;
             }
 
@@ -372,7 +373,8 @@ namespace Microsoft.IdentityModel.Tokens
             }
             else if (webKey.Kty == JsonWebAlgorithmsKeyTypes.EllipticCurve)
             {
-                CreateECDsaFromJsonWebKey(webKey, willCreateSignatures);
+                _ecdsa = CreateECDsaFromJsonWebKey(webKey, willCreateSignatures);
+                _disposeEcdsa = true;
                 return;
             }
 
@@ -417,7 +419,7 @@ namespace Microsoft.IdentityModel.Tokens
             return parameters;
         }
 
-        private void CreateECDsaFromJsonWebKey(JsonWebKey webKey, bool willCreateSignatures)
+        internal static ECDsaCng CreateECDsaFromJsonWebKey(JsonWebKey webKey, bool willCreateSignatures)
         {
             if (webKey == null)
                 throw LogHelper.LogArgumentNullException(nameof(webKey));
@@ -469,8 +471,7 @@ namespace Microsoft.IdentityModel.Tokens
                     Marshal.Copy(keyBlobPtr, keyBlob, 0, keyBlob.Length);
                     using (CngKey cngKey = CngKey.Import(keyBlob, CngKeyBlobFormat.EccPrivateBlob))
                     {
-                        _ecdsa = new ECDsaCng(cngKey);
-                        _disposeEcdsa = true;
+                        return new ECDsaCng(cngKey);
                     }
                 }
                 else
@@ -478,8 +479,7 @@ namespace Microsoft.IdentityModel.Tokens
                     Marshal.Copy(keyBlobPtr, keyBlob, 0, keyBlob.Length);
                     using (CngKey cngKey = CngKey.Import(keyBlob, CngKeyBlobFormat.EccPublicBlob))
                     {
-                        _ecdsa = new ECDsaCng(cngKey);
-                        _disposeEcdsa = true;
+                        return new ECDsaCng(cngKey);
                     }
                 }
             }
@@ -495,7 +495,7 @@ namespace Microsoft.IdentityModel.Tokens
         /// </summary>
         /// <param name="curveId">Represents ecdsa curve -P256, P384, P521</param>
         /// <returns>Size of the key in bytes</returns>
-        private uint GetKeyByteCount(string curveId)
+        private static uint GetKeyByteCount(string curveId)
         {
             if (string.IsNullOrEmpty(curveId))
                 throw LogHelper.LogArgumentNullException(nameof(curveId));
@@ -525,7 +525,7 @@ namespace Microsoft.IdentityModel.Tokens
         /// <param name="curveId">Represents ecdsa curve -P256, P384, P512</param>
         /// <param name="willCreateSignatures">Whether the provider will create signatures or not</param>
         /// <returns>Uint representing the magic number</returns>
-        private uint GetMagicValue(string curveId, bool willCreateSignatures)
+        private static uint GetMagicValue(string curveId, bool willCreateSignatures)
         {
             if (string.IsNullOrEmpty(curveId))
                 throw LogHelper.LogArgumentNullException(nameof(curveId));
