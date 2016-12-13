@@ -119,7 +119,7 @@ namespace Microsoft.IdentityModel.Tokens.Tests
             return HashAlgorithm;
         }
 
-        public override bool IsSupportedAlgorithm(string algorithm, SecurityKey key, bool isPrivateKey)
+        public override bool IsSupportedAlgorithm(string algorithm, SecurityKey key)
         {
             IsSupportedAlgorithmCalled = true;
             foreach (var alg in SupportedAlgorithms)

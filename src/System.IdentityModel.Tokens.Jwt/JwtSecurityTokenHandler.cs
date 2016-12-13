@@ -545,7 +545,7 @@ namespace System.IdentityModel.Tokens.Jwt
             if (cryptoProviderFactory == null)
                 throw LogHelper.LogExceptionMessage(new ArgumentException(LogMessages.IDX10733));
 
-            if (!cryptoProviderFactory.IsSupportedAlgorithm(encryptingCredentials.Enc, encryptingCredentials.Key, false))
+            if (!cryptoProviderFactory.IsSupportedAlgorithm(encryptingCredentials.Enc, encryptingCredentials.Key))
                 throw LogHelper.LogExceptionMessage(new SecurityTokenEncryptionFailedException(string.Format(CultureInfo.InvariantCulture, LogMessages.IDX10615, innerJwt.Header.Enc, encryptingCredentials.Key)));
 
             var header = new JwtHeader(encryptingCredentials, OutboundAlgorithmMap);
@@ -867,7 +867,7 @@ namespace System.IdentityModel.Tokens.Jwt
         private bool ValidateSignature(byte[] encodedBytes, byte[] signature, SecurityKey key, string algorithm, TokenValidationParameters validationParameters)
         {
             var cryptoProviderFactory = validationParameters.CryptoProviderFactory ?? key.CryptoProviderFactory;
-            if (!cryptoProviderFactory.IsSupportedAlgorithm(algorithm, key, false))
+            if (!cryptoProviderFactory.IsSupportedAlgorithm(algorithm, key))
             {
                 IdentityModelEventSource.Logger.WriteInformation(LogMessages.IDX10508, algorithm, key);
                 return false;
@@ -1371,7 +1371,7 @@ namespace System.IdentityModel.Tokens.Jwt
                     continue;
                 }
 
-                if (!cryptoProviderFactory.IsSupportedAlgorithm(jwtToken.Header.Enc, key, true))
+                if (!cryptoProviderFactory.IsSupportedAlgorithm(jwtToken.Header.Enc, key))
                 {
                     IdentityModelEventSource.Logger.WriteWarning(LogMessages.IDX10611, jwtToken.Header.Enc, key);
                     continue;

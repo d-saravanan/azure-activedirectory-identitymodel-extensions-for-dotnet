@@ -67,7 +67,7 @@ namespace Microsoft.IdentityModel.Tokens.Tests
 #pragma warning restore CS3016 // Arrays as attribute arguments is not CLS-compliant
         public void IsSupportedAlgorithm(SymmetricSecurityKey key, string alg, bool expectedResult)
         {
-            if (key.CryptoProviderFactory.IsSupportedAlgorithm(alg, key, false) != expectedResult)
+            if (key.CryptoProviderFactory.IsSupportedAlgorithm(alg, key) != expectedResult)
                 Assert.True(false, string.Format("{0} failed with alg: {1}. ExpectedResult: {2}", key, alg, expectedResult));
         }
 

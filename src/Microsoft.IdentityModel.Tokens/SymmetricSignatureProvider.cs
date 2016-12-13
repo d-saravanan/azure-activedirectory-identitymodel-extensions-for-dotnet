@@ -63,7 +63,7 @@ namespace Microsoft.IdentityModel.Tokens
             if (key == null)
                 throw LogHelper.LogArgumentNullException("key");
 
-            if (!key.CryptoProviderFactory.IsSupportedAlgorithm(algorithm, key, false))
+            if (!key.CryptoProviderFactory.IsSupportedAlgorithm(algorithm, key))
                 throw LogHelper.LogExceptionMessage(new ArgumentException(String.Format(CultureInfo.InvariantCulture, LogMessages.IDX10634, (algorithm ?? "null"), key), nameof(algorithm)));
 
             if (key.KeySize < MinimumSymmetricKeySizeInBits)

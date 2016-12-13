@@ -394,7 +394,7 @@ namespace Microsoft.IdentityModel.Tokens.Tests
             theoryData.Add(new SignatureProviderTestParams
             {
                 Algorithm = SecurityAlgorithms.EcdsaSha384,
-                EE = ExpectedException.ArgumentException("IDX10634:"),
+                EE = ExpectedException.ArgumentOutOfRangeException("IDX10671:"),
                 RawBytes = rawBytes,
                 Key = KeyingMaterial.ECDsa256Key,
                 ShouldVerify = false,

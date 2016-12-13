@@ -172,74 +172,82 @@ namespace Microsoft.IdentityModel.Tokens.Tests
 #pragma warning disable CS3016 // Arrays as attribute arguments is not CLS-compliant
         [Theory, MemberData("DefaultCryptoProviderDataSet")]
 #pragma warning restore CS3016 // Arrays as attribute arguments is not CLS-compliant
-        public void DefaultCryptoProviderFactory(SecurityKey key, string algorithm, bool isPrivateKey, bool isSupported, bool supportsSigning)
+        public void DefaultCryptoProviderFactory(SecurityKey key, string algorithm, bool isSupported, bool supportsSigning, ExpectedException ee)
         {
-            Assert.True(CryptoProviderFactory.Default.IsSupportedAlgorithm(algorithm, key, isPrivateKey) == isSupported, string.Format(CultureInfo.InvariantCulture, "SecurityKey: '{0}', algorithm: '{1}', isSupported: '{2}'", key, algorithm, isSupported));
+            Assert.True(CryptoProviderFactory.Default.IsSupportedAlgorithm(algorithm, key) == isSupported, string.Format(CultureInfo.InvariantCulture, "SecurityKey: '{0}', algorithm: '{1}', isSupported: '{2}'", key, algorithm, isSupported));
             if (isSupported && supportsSigning)
             {
-                var signatureProvider = CryptoProviderFactory.Default.CreateForSigning(key, algorithm);
-                var signatureProviderVerify = CryptoProviderFactory.Default.CreateForVerifying(key, algorithm);
-                var bytes = Encoding.UTF8.GetBytes("GenerateASignature");
-                var signature = signatureProvider.Sign(bytes);
-                var signatureCheck = signatureProviderVerify.Verify(bytes, signature);
-                Assert.True(signatureCheck);
-                CryptoProviderFactory.Default.ReleaseSignatureProvider(signatureProvider);
-                CryptoProviderFactory.Default.ReleaseSignatureProvider(signatureProviderVerify);
+                try
+                {
+                    var signatureProvider = CryptoProviderFactory.Default.CreateForSigning(key, algorithm);
+                    var signatureProviderVerify = CryptoProviderFactory.Default.CreateForVerifying(key, algorithm);
+                    var bytes = Encoding.UTF8.GetBytes("GenerateASignature");
+                    var signature = signatureProvider.Sign(bytes);
+                    var signatureCheck = signatureProviderVerify.Verify(bytes, signature);
+                    Assert.True(signatureCheck);
+                    CryptoProviderFactory.Default.ReleaseSignatureProvider(signatureProvider);
+                    CryptoProviderFactory.Default.ReleaseSignatureProvider(signatureProviderVerify);
+                    ee.ProcessNoException();
+                }
+                catch (Exception ex)
+                {
+                    ee.ProcessException(ex);
+                }
             }
         }
 
-        public static TheoryData<SecurityKey, string, bool, bool, bool> DefaultCryptoProviderDataSet
+        public static TheoryData<SecurityKey, string, bool, bool, ExpectedException> DefaultCryptoProviderDataSet
         {
             get
             {
-                return new TheoryData<SecurityKey, string, bool, bool, bool>
+                return new TheoryData<SecurityKey, string, bool, bool, ExpectedException>
                 {
-                    {KeyingMaterial.ECDsa256Key, SecurityAlgorithms.EcdsaSha256, KeyingMaterial.ECDsa256Key.HasPrivateKey, true, true},
-                    {KeyingMaterial.ECDsa256Key, SecurityAlgorithms.EcdsaSha384, KeyingMaterial.ECDsa256Key.HasPrivateKey, false, true},
-                    {KeyingMaterial.ECDsa256Key, SecurityAlgorithms.EcdsaSha512, KeyingMaterial.ECDsa256Key.HasPrivateKey, false, true},
-                    {KeyingMaterial.ECDsa256Key, SecurityAlgorithms.EcdsaSha256Signature, KeyingMaterial.ECDsa256Key.HasPrivateKey, true, true},
-                    {KeyingMaterial.ECDsa256Key, SecurityAlgorithms.EcdsaSha384Signature, KeyingMaterial.ECDsa256Key.HasPrivateKey, false, true},
-                    {KeyingMaterial.ECDsa256Key, SecurityAlgorithms.EcdsaSha512Signature, KeyingMaterial.ECDsa256Key.HasPrivateKey, false, true},
-                    {KeyingMaterial.ECDsa256Key, SecurityAlgorithms.Aes128Encryption, KeyingMaterial.ECDsa256Key.HasPrivateKey, false, false},
+                    {KeyingMaterial.ECDsa256Key, SecurityAlgorithms.EcdsaSha256, true, true, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.ECDsa256Key, SecurityAlgorithms.EcdsaSha384, true, true, ExpectedException.ArgumentOutOfRangeException("IDX10671:")},
+                    {KeyingMaterial.ECDsa256Key, SecurityAlgorithms.EcdsaSha512, true, true, ExpectedException.ArgumentOutOfRangeException("IDX10671:")},
+                    {KeyingMaterial.ECDsa256Key, SecurityAlgorithms.EcdsaSha256Signature, true, true, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.ECDsa256Key, SecurityAlgorithms.EcdsaSha384Signature, true, true, ExpectedException.ArgumentOutOfRangeException("IDX10671:")},
+                    {KeyingMaterial.ECDsa256Key, SecurityAlgorithms.EcdsaSha512Signature, true, true, ExpectedException.ArgumentOutOfRangeException("IDX10671:")},
+                    {KeyingMaterial.ECDsa256Key, SecurityAlgorithms.Aes128Encryption, false, false, ExpectedException.NoExceptionExpected},
 
-                    {KeyingMaterial.JsonWebKeyEcdsa256, SecurityAlgorithms.EcdsaSha256, KeyingMaterial.JsonWebKeyEcdsa256.HasPrivateKey, true, true},
-                    {KeyingMaterial.JsonWebKeyEcdsa256Public, SecurityAlgorithms.EcdsaSha256, KeyingMaterial.JsonWebKeyEcdsa256Public.HasPrivateKey, true, false},
-                    {KeyingMaterial.JsonWebKeyEcdsa256, SecurityAlgorithms.EcdsaSha256Signature, KeyingMaterial.JsonWebKeyEcdsa256.HasPrivateKey, true, true},
-                    {KeyingMaterial.JsonWebKeyEcdsa256Public, SecurityAlgorithms.EcdsaSha256Signature, KeyingMaterial.JsonWebKeyEcdsa256Public.HasPrivateKey, true, false},
-                    {KeyingMaterial.JsonWebKeyEcdsa256, SecurityAlgorithms.Aes256KeyWrap, KeyingMaterial.JsonWebKeyEcdsa256.HasPrivateKey, false, false},
-                    {KeyingMaterial.JsonWebKeyEcdsa256Public, SecurityAlgorithms.DesEncryption, KeyingMaterial.JsonWebKeyEcdsa256Public.HasPrivateKey, false, false},
+                    {KeyingMaterial.JsonWebKeyEcdsa256, SecurityAlgorithms.EcdsaSha256, true, true, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.JsonWebKeyEcdsa256Public, SecurityAlgorithms.EcdsaSha256, true, false, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.JsonWebKeyEcdsa256, SecurityAlgorithms.EcdsaSha256Signature, true, true, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.JsonWebKeyEcdsa256Public, SecurityAlgorithms.EcdsaSha256Signature, true, false, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.JsonWebKeyEcdsa256, SecurityAlgorithms.Aes256KeyWrap, false, false, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.JsonWebKeyEcdsa256Public, SecurityAlgorithms.DesEncryption, false, false, ExpectedException.NoExceptionExpected},
 
-                    {KeyingMaterial.JsonWebKeyRsa256, SecurityAlgorithms.RsaSha256, KeyingMaterial.JsonWebKeyRsa256.HasPrivateKey, true, true},
-                    {KeyingMaterial.JsonWebKeyRsa256, SecurityAlgorithms.RsaSha256Signature, KeyingMaterial.JsonWebKeyRsa256.HasPrivateKey, true, true},
-                    {KeyingMaterial.JsonWebKeyRsa256Public, SecurityAlgorithms.RsaSha256, KeyingMaterial.JsonWebKeyRsa256Public.HasPrivateKey, true, false},
-                    {KeyingMaterial.JsonWebKeyRsa256Public, SecurityAlgorithms.RsaSha256Signature, KeyingMaterial.JsonWebKeyRsa256Public.HasPrivateKey, true, false},
-                    {KeyingMaterial.JsonWebKeyRsa256, SecurityAlgorithms.Aes192KeyWrap, KeyingMaterial.JsonWebKeyRsa256.HasPrivateKey, false, false},
-                    {KeyingMaterial.JsonWebKeyRsa256Public, SecurityAlgorithms.Aes192KeyWrap, KeyingMaterial.JsonWebKeyRsa256Public.HasPrivateKey, false, false},
+                    {KeyingMaterial.JsonWebKeyRsa256, SecurityAlgorithms.RsaSha256, true, true, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.JsonWebKeyRsa256, SecurityAlgorithms.RsaSha256Signature, true, true, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.JsonWebKeyRsa256Public, SecurityAlgorithms.RsaSha256, true, false, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.JsonWebKeyRsa256Public, SecurityAlgorithms.RsaSha256Signature, true, false, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.JsonWebKeyRsa256, SecurityAlgorithms.Aes192KeyWrap, false, false, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.JsonWebKeyRsa256Public, SecurityAlgorithms.Aes192KeyWrap, false, false, ExpectedException.NoExceptionExpected},
 
-                    {KeyingMaterial.JsonWebKeySymmetric256, SecurityAlgorithms.HmacSha256, KeyingMaterial.JsonWebKeySymmetric256.HasPrivateKey, true, true},
-                    {KeyingMaterial.JsonWebKeySymmetric256, SecurityAlgorithms.HmacSha256Signature, KeyingMaterial.JsonWebKeySymmetric256.HasPrivateKey, true, true},
-                    {KeyingMaterial.JsonWebKeySymmetric256, SecurityAlgorithms.EcdsaSha512Signature, KeyingMaterial.JsonWebKeySymmetric256.HasPrivateKey, false, false},
-                    {KeyingMaterial.JsonWebKeySymmetric256, SecurityAlgorithms.RsaSha256Signature, KeyingMaterial.JsonWebKeySymmetric256.HasPrivateKey, false, false},
+                    {KeyingMaterial.JsonWebKeySymmetric256, SecurityAlgorithms.HmacSha256, true, true, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.JsonWebKeySymmetric256, SecurityAlgorithms.HmacSha256Signature, true, true, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.JsonWebKeySymmetric256, SecurityAlgorithms.EcdsaSha512Signature, false, false, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.JsonWebKeySymmetric256, SecurityAlgorithms.RsaSha256Signature, false, false, ExpectedException.NoExceptionExpected},
 
-                    {KeyingMaterial.RsaSecurityKey_2048, SecurityAlgorithms.RsaSha256, KeyingMaterial.RsaSecurityKey_2048.HasPrivateKey, true, true},
-                    {KeyingMaterial.RsaSecurityKey_2048, SecurityAlgorithms.RsaSha256Signature, KeyingMaterial.RsaSecurityKey_2048.HasPrivateKey, true, true},
-                    {KeyingMaterial.RsaSecurityKey_2048, SecurityAlgorithms.RsaSha384, KeyingMaterial.RsaSecurityKey_2048.HasPrivateKey, true, true},
-                    {KeyingMaterial.RsaSecurityKey_2048, SecurityAlgorithms.RsaSha384Signature, KeyingMaterial.RsaSecurityKey_2048.HasPrivateKey, true, true},
-                    {KeyingMaterial.RsaSecurityKey_2048, SecurityAlgorithms.RsaSha512, KeyingMaterial.RsaSecurityKey_2048.HasPrivateKey, true, true},
-                    {KeyingMaterial.RsaSecurityKey_2048, SecurityAlgorithms.RsaSha512Signature, KeyingMaterial.RsaSecurityKey_2048.HasPrivateKey, true, true},
-                    {KeyingMaterial.RsaSecurityKey_2048, SecurityAlgorithms.Aes128Encryption, KeyingMaterial.RsaSecurityKey_2048.HasPrivateKey, false, false},
+                    {KeyingMaterial.RsaSecurityKey_2048, SecurityAlgorithms.RsaSha256, true, true, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.RsaSecurityKey_2048, SecurityAlgorithms.RsaSha256Signature, true, true, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.RsaSecurityKey_2048, SecurityAlgorithms.RsaSha384, true, true, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.RsaSecurityKey_2048, SecurityAlgorithms.RsaSha384Signature, true, true, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.RsaSecurityKey_2048, SecurityAlgorithms.RsaSha512, true, true, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.RsaSecurityKey_2048, SecurityAlgorithms.RsaSha512Signature, true, true, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.RsaSecurityKey_2048, SecurityAlgorithms.Aes128Encryption, false, false, ExpectedException.NoExceptionExpected},
 
-                    {KeyingMaterial.X509SecurityKeySelfSigned2048_SHA256, SecurityAlgorithms.RsaSha256, KeyingMaterial.X509SecurityKeySelfSigned2048_SHA256.HasPrivateKey, true, true},
-                    {KeyingMaterial.X509SecurityKeySelfSigned2048_SHA256, SecurityAlgorithms.RsaSha256Signature, KeyingMaterial.X509SecurityKeySelfSigned2048_SHA256.HasPrivateKey, true, true},
-                    {KeyingMaterial.X509SecurityKeySelfSigned2048_SHA256, SecurityAlgorithms.RsaSha384, KeyingMaterial.X509SecurityKeySelfSigned2048_SHA256.HasPrivateKey, true, true},
-                    {KeyingMaterial.X509SecurityKeySelfSigned2048_SHA256, SecurityAlgorithms.RsaSha384Signature, KeyingMaterial.X509SecurityKeySelfSigned2048_SHA256.HasPrivateKey, true, true},
-                    {KeyingMaterial.X509SecurityKeySelfSigned2048_SHA256, SecurityAlgorithms.RsaSha512, KeyingMaterial.X509SecurityKeySelfSigned2048_SHA256.HasPrivateKey, true, true},
-                    {KeyingMaterial.X509SecurityKeySelfSigned2048_SHA256, SecurityAlgorithms.RsaSha512Signature, KeyingMaterial.X509SecurityKeySelfSigned2048_SHA256.HasPrivateKey, true, true},
-                    {KeyingMaterial.X509SecurityKeySelfSigned2048_SHA256, SecurityAlgorithms.Aes128Encryption, KeyingMaterial.X509SecurityKeySelfSigned2048_SHA256.HasPrivateKey, false, false},
+                    {KeyingMaterial.X509SecurityKeySelfSigned2048_SHA256, SecurityAlgorithms.RsaSha256, true, true, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.X509SecurityKeySelfSigned2048_SHA256, SecurityAlgorithms.RsaSha256Signature, true, true, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.X509SecurityKeySelfSigned2048_SHA256, SecurityAlgorithms.RsaSha384, true, true, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.X509SecurityKeySelfSigned2048_SHA256, SecurityAlgorithms.RsaSha384Signature, true, true, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.X509SecurityKeySelfSigned2048_SHA256, SecurityAlgorithms.RsaSha512, true, true, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.X509SecurityKeySelfSigned2048_SHA256, SecurityAlgorithms.RsaSha512Signature, true, true, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.X509SecurityKeySelfSigned2048_SHA256, SecurityAlgorithms.Aes128Encryption, false, false, ExpectedException.NoExceptionExpected},
 
-                    {KeyingMaterial.SymmetricSecurityKey2_256, SecurityAlgorithms.HmacSha256, false, true, true},
-                    {KeyingMaterial.SymmetricSecurityKey2_256, SecurityAlgorithms.HmacSha256Signature, false, true, true},
-                    {KeyingMaterial.SymmetricSecurityKey2_256, SecurityAlgorithms.RsaSha256Signature, false, false, false}
+                    {KeyingMaterial.SymmetricSecurityKey2_256, SecurityAlgorithms.HmacSha256, true, true, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.SymmetricSecurityKey2_256, SecurityAlgorithms.HmacSha256Signature, true, true, ExpectedException.NoExceptionExpected},
+                    {KeyingMaterial.SymmetricSecurityKey2_256, SecurityAlgorithms.RsaSha256Signature, false, false, ExpectedException.NoExceptionExpected}
                 };
             }
         }
