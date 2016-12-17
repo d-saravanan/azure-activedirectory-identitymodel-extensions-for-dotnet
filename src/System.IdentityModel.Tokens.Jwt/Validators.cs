@@ -170,13 +170,14 @@ namespace System.IdentityModel.Tokens
             if (x509SecurityKey != null)
             {
                 if (validationParameters.CertificateValidator == null)
-                    throw new NullReferenceException(ErrorMessages.IDX10232);
+                    throw new SecurityTokenValidationException(ErrorMessages.IDX10232);
 
                 validationParameters.CertificateValidator.Validate(x509SecurityKey.Certificate);
-                return;
             }
-
-            throw new ArgumentOutOfRangeException("securityKey", ErrorMessages.IDX11009);
+            else
+            {
+                throw new SecurityTokenValidationException(ErrorMessages.IDX11009);
+            }
         }
 
         /// <summary>

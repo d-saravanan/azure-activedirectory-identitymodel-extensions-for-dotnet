@@ -70,8 +70,37 @@ namespace Microsoft.IdentityModel.Test
             JwtSecurityTokenHandler.InboundClaimFilter.Add("iss");
             JwtSecurityTokenHandler.InboundClaimFilter.Add("nbf");
 
+            SecurityKey x509SecurityKey = new X509SecurityKey(KeyingMaterial.DefaultCert_2048);
+            SigningCredentials signingCredentials = new SigningCredentials(x509SecurityKey, SecurityAlgorithms.RsaSha256Signature, SecurityAlgorithms.Sha256Digest);
+            SecurityTokenDescriptor descriptor = new SecurityTokenDescriptor
+            {
+                AppliesToAddress = IdentityUtilities.DefaultAudience,
+                SigningCredentials = signingCredentials,
+                Subject = IdentityUtilities.DefaultClaimsIdentity,
+                TokenIssuerName = IdentityUtilities.DefaultIssuer,
+                Lifetime = new System.IdentityModel.Protocols.WSTrust.Lifetime(DateTime.UtcNow, DateTime.UtcNow + TimeSpan.FromDays(1)),
+            };
+
+            TokenValidationParameters validationParameters = new TokenValidationParameters
+            {
+                AuthenticationType = IdentityUtilities.DefaultAuthenticationType,
+                IssuerSigningKey = x509SecurityKey,
+                ValidAudience = IdentityUtilities.DefaultAudience,
+                ValidIssuer = IdentityUtilities.DefaultIssuer,
+                ValidateIssuerSigningKey = true
+            };
+
+            // Test ValidateIssuerSigningKey = true, validationParameters.CertificateValidator == null
+            string jwtTokenTest = IdentityUtilities.CreateJwtToken(descriptor, jwtHandler);
+            ClaimsPrincipal jwtPrincipalTest = ValidateToken(jwtTokenTest, validationParameters, jwtHandler, ExpectedException.SecurityTokenValidationException("IDX10232:"));
+
             string nullIssuerJwtToken = IdentityUtilities.CreateJwtToken(IdentityUtilities.NullIssuerAsymmetricSecurityTokenDescriptor, jwtHandler);
             string jwtToken = IdentityUtilities.CreateJwtToken(IdentityUtilities.DefaultAsymmetricSecurityTokenDescriptor, jwtHandler);
+
+            // Test ValidateIssuerSigningKey = true, signingkey is not X509SecurityKey
+            validationParameters = IdentityUtilities.DefaultAsymmetricTokenValidationParameters;
+            validationParameters.ValidateIssuerSigningKey = true;
+            jwtPrincipalTest = ValidateToken(jwtToken, validationParameters, jwtHandler, ExpectedException.SecurityTokenValidationException("IDX11009:"));
 
             // saml tokens created using Microsoft.IdentityModel.Extensions
             string imSaml2Token = IdentityUtilities.CreateSaml2Token(IdentityUtilities.DefaultAsymmetricSecurityTokenDescriptor, imSaml2Handler);
