@@ -53,7 +53,6 @@ namespace Microsoft.IdentityModel.Tokens
         private bool _disposed;
         private IReadOnlyDictionary<string, int> _minimumAsymmetricKeySizeInBitsForSigningMap;
         private IReadOnlyDictionary<string, int> _minimumAsymmetricKeySizeInBitsForVerifyingMap;
-        private IReadOnlyDictionary<string, int> _ecdsaKeySizeInBitsMap;
         private RSACryptoServiceProviderProxy _rsaCryptoServiceProviderProxy;
 
         /// <summary>
@@ -91,7 +90,7 @@ namespace Microsoft.IdentityModel.Tokens
         /// <summary>
         /// Mapping from algorithm to <see cref="ECDsa"/>.KeySize.
         /// </summary>
-        public static readonly Dictionary<string, int> DefaultECDsaKeySizeInBitsMap = new Dictionary<string, int>()
+        private static readonly Dictionary<string, int> DefaultECDsaKeySizeInBitsMap = new Dictionary<string, int>()
         {
             { SecurityAlgorithms.EcdsaSha256, 256 },
             { SecurityAlgorithms.EcdsaSha384, 384 },
@@ -138,7 +137,6 @@ namespace Microsoft.IdentityModel.Tokens
 
             _minimumAsymmetricKeySizeInBitsForSigningMap = new Dictionary<string, int>(DefaultMinimumAsymmetricKeySizeInBitsForSigningMap);
             _minimumAsymmetricKeySizeInBitsForVerifyingMap = new Dictionary<string, int>(DefaultMinimumAsymmetricKeySizeInBitsForVerifyingMap);
-            _ecdsaKeySizeInBitsMap = new Dictionary<string, int>(DefaultECDsaKeySizeInBitsMap);
             if (willCreateSignatures && !HasPrivateKey(key))
                 throw LogHelper.LogExceptionMessage(new InvalidOperationException(String.Format(CultureInfo.InvariantCulture, LogMessages.IDX10638, key)));
 
@@ -652,7 +650,7 @@ namespace Microsoft.IdentityModel.Tokens
 
         private bool validateECDSAKeySize(ECDsa key, string algorithm)
         {
-            if (_ecdsaKeySizeInBitsMap.ContainsKey(algorithm) && key.KeySize == _ecdsaKeySizeInBitsMap[algorithm])
+            if (DefaultECDsaKeySizeInBitsMap.ContainsKey(algorithm) && key.KeySize == DefaultECDsaKeySizeInBitsMap[algorithm])
                 return true;
 
             return false;
