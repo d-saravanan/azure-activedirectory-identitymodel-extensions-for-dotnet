@@ -89,10 +89,24 @@ namespace Microsoft.IdentityModel.Protocols
         /// <param name="metadataAddress">the address to obtain configuration.</param>
         /// <param name="docRetriever">the <see cref="IDocumentRetriever"/> that reaches out to obtain the configuration.</param>
         public ConfigurationManager(string metadataAddress, IDocumentRetriever docRetriever)
+            : this(metadataAddress, null, docRetriever)
         {
-            if (!typeof(T).Equals(typeof(WsFederationConfiguration)) && (!typeof(T).Equals(typeof(OpenIdConnectConfiguration))))
+        }
+
+        /// <summary>
+        /// Instantiaties a new <see cref="ConfigurationManager{T}"/> that manages automatic and controls refreshing on configuration data.
+        /// </summary>
+        /// <param name="metadataAddress">the address to obtain configuration.</param>
+        /// <param name="configRetriever">the <see cref="IConfigurationRetriever{T}"/></param>
+        /// <param name="docRetriever">the <see cref="IDocumentRetriever"/> that reaches out to obtain the configuration.</param>
+        public ConfigurationManager(string metadataAddress, IConfigurationRetriever<T> configRetriever, IDocumentRetriever docRetriever)
+        {
+            if (configRetriever == null)
             {
-                throw new NotImplementedException(typeof(T).FullName);
+                if (!typeof(T).Equals(typeof(WsFederationConfiguration)) && (!typeof(T).Equals(typeof(OpenIdConnectConfiguration))))
+                {
+                    throw new NotImplementedException(typeof(T).FullName);
+                }
             }
 
             if (string.IsNullOrWhiteSpace(metadataAddress))
@@ -107,7 +121,16 @@ namespace Microsoft.IdentityModel.Protocols
 
             _metadataAddress = metadataAddress;
             _docRetriever = docRetriever;
-            _configRetriever = GetConfigurationRetriever();
+
+            if (configRetriever != null)
+            {
+                _configRetriever = configRetriever;
+            }
+            else
+            {
+                _configRetriever = GetConfigurationRetriever();
+            }
+
             _refreshLock = new SemaphoreSlim(1);
         }
 
